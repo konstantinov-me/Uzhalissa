@@ -9,6 +9,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+try:  # Python 3.12+: собственный адаптер вместо устаревшего default
+    sqlite3.register_adapter(datetime, lambda dt: dt.isoformat())
+except AttributeError:
+    pass
+
 from bot.core.models import Chat, Message, Role
 
 _SCHEMA = """

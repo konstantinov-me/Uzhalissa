@@ -19,7 +19,13 @@ class ChatMessage:
 
 
 class LLMBackend(ABC):
-    """Интерфейс генератора ответов."""
+    """Интерфейс генератора ответов.
+
+    Обязательный метод — `generate()` (полный ответ одним текстом).
+    `generate_stream()` предоставляет потоковую отдачу по умолчанию; бэкенды,
+    умеющие отдавать токены по мере генерации (Ollama, transformers), могут
+    переопределить его для настоящей стриминговой генерации.
+    """
 
     @property
     @abstractmethod
@@ -29,6 +35,10 @@ class LLMBackend(ABC):
     @abstractmethod
     def generate(self, messages: list[ChatMessage]) -> str:
         """Принимает историю диалога, возвращает текст ответа ассистента."""
+
+    def generate_stream(self, messages: list[ChatMessage]):
+        """По умолчанию: имитация стриминга поверх неблокирующего generate()."""
+        yield self.generate(messages)
 
 
 def build_backend(backend: str, **kwargs) -> LLMBackend:

@@ -21,17 +21,31 @@ class OllamaBackend(LLMBackend):
     def name(self) -> str:
         return f"ollama/{self._model}"
 
-    def generate(self, messages: list[ChatMessage]) -> str:
+    def _request(self, messages: list[ChatMessage], stream: bool):
         payload = {
             "model": self._model,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
-            "stream": False,
+            "stream": stream,
         }
         req = urllib.request.Request(
             f"{self._base_url}/api/chat",
             data=json.dumps(payload).encode(),
             headers={"Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        return urllib.request.urlopen(req, timeout=120)
+
+    def generate(self, messages: list[ChatMessage]) -> str:
+        with self._request(messages, stream=False) as resp:
             data = json.loads(resp.read())
         return data.get("message", {}).get("content", "").strip()
+
+    def generate_stream(self, messages: list[ChatMessage]):
+        """Настоящий стриминг: Ollama отдаёт JSON-lines с частями ответа."""
+        with self._request(messages, stream=True) as resp:
+            for line in resp:
+                if not line.strip():
+                    continue
+                chunk = json.loads(line)
+                piece = chunk.get("message", {}).get("content", "")
+                if piece:
+                    yield piece
